@@ -121,16 +121,19 @@ Question: {question}
 
 Answer:"""
 
-def ask_question(question: str):
-    """Retrieval pipeline, built with LangChain's RetrievalQA chain:
-    embed query -> Chroma retriever finds top chunks -> chain fills the prompt
-    template -> local Ollama LLM (via LangChain's OllamaLLM wrapper) generates the answer."""
+def ask_question_api(question: str) -> dict:
+    """Core retrieval pipeline, returning plain data (no printing) so both the
+    terminal command AND the FastAPI endpoint can reuse this same logic.
+
+    Built with LangChain's RetrievalQA chain: embed query -> Chroma retriever
+    finds top chunks -> chain fills the prompt template -> local Ollama LLM
+    (via LangChain's OllamaLLM wrapper) generates the answer."""
     if not DB_DIR.exists():
         raise RuntimeError("No index found. Run `python rag_assistant.py ingest` first.")
 
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     vectordb = Chroma(persist_directory=str(DB_DIR), embedding_function=embeddings)
-    retriever = vectordb.as_retriever(search_kwargs={"k": 4})  # top 4 relevant chunks — now safe since reference-list noise is filtered out before indexing
+    retriever = vectordb.as_retriever(search_kwargs={"k": 4})  # top 4 relevant chunks — safe since reference-list noise is filtered out before indexing
 
     llm = OllamaLLM(model=LLM_MODEL, temperature=0)
 
@@ -149,14 +152,25 @@ def ask_question(question: str):
 
     result = qa_chain.invoke({"query": question})
 
-    print("\n--- ANSWER ---")
-    print(result["result"])
-
-    print("\n--- SOURCES ---")
-    for i, doc in enumerate(result["source_documents"], 1):
+    sources = []
+    for doc in result["source_documents"]:
         source = doc.metadata.get("source", "unknown")
         snippet = doc.page_content[:120].replace("\n", " ")
-        print(f"[{i}] {source} :: \"{snippet}...\"")
+        sources.append({"source": source, "snippet": snippet})
+
+    return {"answer": result["result"], "sources": sources}
+
+
+def ask_question(question: str):
+    """Terminal command version — calls the same core logic, then prints it nicely."""
+    result = ask_question_api(question)
+
+    print("\n--- ANSWER ---")
+    print(result["answer"])
+
+    print("\n--- SOURCES ---")
+    for i, s in enumerate(result["sources"], 1):
+        print(f"[{i}] {s['source']} :: \"{s['snippet']}...\"")
 
 
 if __name__ == "__main__":

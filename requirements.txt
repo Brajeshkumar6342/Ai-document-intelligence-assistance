@@ -7,3 +7,5 @@ langchain-chroma
 chromadb
 sentence-transformers
 pypdf
+fastapi
+uvicorn
