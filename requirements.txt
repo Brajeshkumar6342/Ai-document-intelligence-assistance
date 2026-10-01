@@ -9,3 +9,5 @@ sentence-transformers
 pypdf
 fastapi
 uvicorn
+streamlit
+requests
