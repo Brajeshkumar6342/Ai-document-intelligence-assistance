@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+chroma_db/
+.env
+
+# Don't commit the research PDFs you tested with (likely copyrighted) —
+# keep sample_docs/ structure but not the actual files.
+sample_docs/*.pdf
+sample_docs/*.txt
+!sample_docs/.gitkeep
