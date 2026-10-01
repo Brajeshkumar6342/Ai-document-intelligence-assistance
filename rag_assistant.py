@@ -15,6 +15,7 @@ Usage:
     python rag_assistant.py ask "your question here"
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -36,8 +37,35 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
 
+# Matches a "References" or "Bibliography" heading on its own line (academic paper convention).
+# Once this is found in a page, everything from that point on — and every later page of the
+# same file — is the citation list, not real content, so it gets dropped before chunking.
+REFERENCES_PATTERN = re.compile(r"\n\s*(references|bibliography)\s*\n", re.IGNORECASE)
+
+
+def strip_references(docs):
+    """Remove reference/bibliography sections so they never get embedded or retrieved.
+    Limitation: relies on a 'References' heading appearing on its own line — papers that
+    format this differently (or have no explicit heading) won't be caught by this heuristic."""
+    cleaned = []
+    cutoff_sources = set()
+    for doc in docs:
+        source = doc.metadata.get("source")
+        if source in cutoff_sources:
+            continue  # already past the references section for this file — skip remaining pages
+        match = REFERENCES_PATTERN.search(doc.page_content)
+        if match:
+            doc.page_content = doc.page_content[: match.start()]
+            cutoff_sources.add(source)
+            if doc.page_content.strip():
+                cleaned.append(doc)
+            continue
+        cleaned.append(doc)
+    return cleaned
+
+
 def load_documents():
-    """Load every .pdf and .txt file from sample_docs/"""
+    """Load every .pdf and .txt file from sample_docs/, then strip reference sections."""
     docs = []
     for path in DOCS_DIR.glob("*"):
         if path.suffix.lower() == ".pdf":
@@ -48,7 +76,9 @@ def load_documents():
         raise FileNotFoundError(
             f"No .pdf or .txt files found in {DOCS_DIR}. Add some documents first."
         )
-    print(f"Loaded {len(docs)} document(s) / page(s).")
+    before = len(docs)
+    docs = strip_references(docs)
+    print(f"Loaded {before} document(s) / page(s); {len(docs)} remain after stripping reference sections.")
     return docs
 
 
@@ -100,7 +130,7 @@ def ask_question(question: str):
 
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     vectordb = Chroma(persist_directory=str(DB_DIR), embedding_function=embeddings)
-    retriever = vectordb.as_retriever(search_kwargs={"k": 6})  # top 6 relevant chunks (was 3 — widened to catch summary/abstract content buried among reference-list chunks)
+    retriever = vectordb.as_retriever(search_kwargs={"k": 4})  # top 4 relevant chunks — now safe since reference-list noise is filtered out before indexing
 
     llm = OllamaLLM(model=LLM_MODEL, temperature=0)
 
