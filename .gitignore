@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 chroma_db/
 .env
+!.env.example
 
 # Don't commit the research PDFs you tested with (likely copyrighted) —
 # keep sample_docs/ structure but not the actual files.

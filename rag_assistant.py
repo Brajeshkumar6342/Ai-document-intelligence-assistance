@@ -15,15 +15,18 @@ Usage:
     python rag_assistant.py ask "your question here"
 """
 
+import os
 import re
 import sys
 from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv()  # reads .env locally if present; harmless no-op when deployed (real env vars are set by the platform instead)
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.chains import RetrievalQA
 
@@ -31,7 +34,27 @@ DOCS_DIR = Path(__file__).parent / "sample_docs"
 DB_DIR = Path(__file__).parent / "chroma_db"
 
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"   # small, fast, runs on CPU
-LLM_MODEL = "llama3"                    # change to "phi3" if llama3 is too heavy for your machine
+LLM_MODEL = "llama3"                    # used only for local Ollama — change to "phi3" if llama3 is too heavy for your machine
+
+# Which LLM backend to use. Controlled by an environment variable so the SAME
+# code works both locally (Ollama, free/private) and when deployed (Groq, since
+# free hosting platforms can't run Ollama's background model server).
+# Set LLM_BACKEND=groq and GROQ_API_KEY=... in your deployment platform's
+# secrets settings. Locally, leave both unset to default to Ollama.
+LLM_BACKEND = os.environ.get("LLM_BACKEND", "ollama")
+
+
+def get_llm():
+    """Returns the right LangChain LLM object depending on LLM_BACKEND."""
+    if LLM_BACKEND == "groq":
+        from langchain_groq import ChatGroq
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            raise RuntimeError("LLM_BACKEND=groq but GROQ_API_KEY is not set.")
+        return ChatGroq(model="llama-3.1-8b-instant", temperature=0, api_key=api_key)
+    else:
+        from langchain_ollama import OllamaLLM
+        return OllamaLLM(model=LLM_MODEL, temperature=0)
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
@@ -135,7 +158,7 @@ def ask_question_api(question: str) -> dict:
     vectordb = Chroma(persist_directory=str(DB_DIR), embedding_function=embeddings)
     retriever = vectordb.as_retriever(search_kwargs={"k": 4})  # top 4 relevant chunks — safe since reference-list noise is filtered out before indexing
 
-    llm = OllamaLLM(model=LLM_MODEL, temperature=0)
+    llm = get_llm()  # Ollama locally, Groq when deployed — see LLM_BACKEND above
 
     prompt = PromptTemplate(
         template=PROMPT_TEMPLATE,

@@ -11,3 +11,5 @@ fastapi
 uvicorn
 streamlit
 requests
+langchain-groq
+python-dotenv
