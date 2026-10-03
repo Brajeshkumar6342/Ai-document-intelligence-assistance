@@ -54,7 +54,7 @@ def get_llm():
         api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise RuntimeError("LLM_BACKEND=groq but GROQ_API_KEY is not set.")
-        return ChatGroq(model="llama-3.1-8b-instant", temperature=0, api_key=api_key)
+        return ChatGroq(model="openai/gpt-oss-20b", temperature=0, api_key=api_key)
     else:
         from langchain_ollama import OllamaLLM
         return OllamaLLM(model=LLM_MODEL, temperature=0)
