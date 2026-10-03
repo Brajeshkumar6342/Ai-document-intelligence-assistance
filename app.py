@@ -13,7 +13,14 @@ Run with (in a SEPARATE terminal from the one running uvicorn):
 import requests
 import streamlit as st
 
-API_URL = "http://localhost:8000"
+# API_URL comes from Streamlit secrets when deployed (set in the Cloud dashboard
+# under Settings > Secrets as API_URL = "https://your-render-url.onrender.com"),
+# and falls back to localhost for local development — same pattern as the
+# LLM_BACKEND environment variable in rag_assistant.py.
+try:
+    API_URL = st.secrets["API_URL"]
+except (KeyError, FileNotFoundError):
+    API_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="AI Document Intelligence Assistant", page_icon="📄")
 
