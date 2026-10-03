@@ -1,13 +1,33 @@
-# AI Document Intelligence Assistant (Local, Free RAG Pipeline)
+# AI Document Intelligence Assistant
 
 A RAG (Retrieval-Augmented Generation) system that answers questions about
-your documents — running entirely on your machine, no API keys or cost.
+your documents, grounded in retrieved source chunks rather than relying on
+the model's own memory.
+
+**🔗 Live demo:** https://ai-document-intelligence-assistance-cjqywh4srryhcvm2tagmlt.streamlit.app/
+**🔗 API docs:** https://ai-document-intelligence-assistance.onrender.com/docs
+
+> Note: both are hosted on free tiers. The API's filesystem is ephemeral, so
+> if you don't get an answer, call `POST /ingest` once first to rebuild the
+> index (needed after the server has been inactive/redeployed). The first
+> request after inactivity may also be slow ("cold start").
+
+Can run two ways:
+- **Fully local** — Ollama for the LLM, no API keys, no cost, nothing leaves
+  your machine
+- **Deployed** — Groq's hosted API for the LLM instead of Ollama (since free
+  hosting platforms can't run a background model server), controlled by one
+  environment variable with no code changes needed
 
 ## Stack
-- **Embeddings**: `sentence-transformers` (`all-MiniLM-L6-v2`) via HuggingFace
+- **Embeddings**: `fastembed` (`BAAI/bge-small-en-v1.5`), ONNX-based — chosen
+  specifically for its small memory footprint, which matters on free-tier
+  hosting (no PyTorch/CUDA dependency)
 - **Vector store**: Chroma (local, persisted to disk)
-- **LLM**: Ollama (`llama3` or `phi3`, running locally)
+- **LLM**: Ollama locally (`llama3`/`phi3`), or Groq (`openai/gpt-oss-20b`) when deployed
 - **Orchestration**: LangChain
+- **API**: FastAPI
+- **UI**: Streamlit
 
 ## 1. Install Ollama (the local LLM runner)
 
