@@ -1,0 +1,58 @@
+AI Document Intelligence Assistant — Project Overview
+
+This project is a Retrieval-Augmented Generation (RAG) system that answers
+questions about documents by combining semantic search with a large language
+model. It was built by Brajesh Kumar, an M.Tech Computer Science student at
+NIT Meghalaya, as a hands-on exploration of modern AI application development.
+
+How the system works:
+
+1. Document Loading: PDF and text files are loaded and their content extracted.
+
+2. Reference Stripping: For academic papers, the system automatically detects
+and removes bibliography and reference sections. This matters because citation
+lists are packed with the same keywords as the real content (author names,
+topic terms), which can confuse a naive retrieval system into treating a list
+of paper titles as if it were the actual answer to a question.
+
+3. Chunking: Documents are split into overlapping segments of roughly 500
+characters, using a recursive strategy that prefers splitting at paragraph
+and sentence boundaries over cutting mid-word. The overlap between chunks
+ensures that a fact sitting near a chunk boundary is never fully lost.
+
+4. Embedding: Each chunk is converted into a numerical vector using the
+all-MiniLM-L6-v2 sentence embedding model. Vectors that are close together
+in this numerical space represent text with similar meaning, even if the
+exact words used are different.
+
+5. Vector Storage: These vectors are stored in a Chroma vector database,
+which supports fast similarity search across potentially thousands of chunks.
+
+6. Retrieval: When a user asks a question, the question itself is embedded
+using the same model, and the system finds the chunks whose vectors are
+most similar to the question's vector.
+
+7. Answer Generation: The retrieved chunks are inserted into a prompt
+template along with the original question, and sent to a large language
+model with an explicit instruction to answer only using the provided
+context. This grounding step is what separates RAG from a model simply
+answering from its own training data — it reduces hallucination and allows
+every answer to be traced back to a specific source passage.
+
+8. Interfaces: The system is accessible three ways — a command-line script,
+a REST API built with FastAPI (with interactive documentation at /docs),
+and a Streamlit web interface for point-and-click use.
+
+Deployment notes:
+
+Locally, the system runs entirely offline using Ollama for the language
+model, meaning no API costs and no data leaving the user's machine. For the
+hosted version you are using right now, the language model backend is
+swapped to Groq's hosted API, since free hosting platforms cannot run a
+background model server like Ollama. This swap is controlled entirely by an
+environment variable, so the same codebase supports both configurations
+without any changes to the core logic.
+
+Try asking this system questions like "How does the chunking strategy work?"
+or "Why does the system strip reference sections?" to see it retrieve and
+explain its own documentation.

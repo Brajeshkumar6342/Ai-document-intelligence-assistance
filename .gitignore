@@ -10,3 +10,7 @@ chroma_db/
 sample_docs/*.pdf
 sample_docs/*.txt
 !sample_docs/.gitkeep
+
+!sample_docs/about_this_project.txt
+
+!sample_docs/about_this_project.txt
