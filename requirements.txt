@@ -1,11 +1,10 @@
 langchain-community
 langchain-classic
-langchain-huggingface
 langchain-text-splitters
 langchain-ollama
 langchain-chroma
 chromadb
-sentence-transformers
+fastembed
 pypdf
 fastapi
 uvicorn

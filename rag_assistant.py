@@ -2,9 +2,12 @@
 AI Document Intelligence Assistant — Core RAG Pipeline
 --------------------------------------------------------
 Fully free/local stack:
-  - Embeddings : sentence-transformers (HuggingFace) — all-MiniLM-L6-v2
+  - Embeddings : FastEmbed (ONNX Runtime) — BAAI/bge-small-en-v1.5
+                 Chosen over sentence-transformers/torch specifically because
+                 it uses a fraction of the memory (no PyTorch, no CUDA libs),
+                 which matters when deploying to free-tier hosting (512MB RAM).
   - Vector DB  : Chroma (local, persisted to disk)
-  - LLM        : Ollama (runs a local model like llama3 or phi3)
+  - LLM        : Ollama locally (llama3/phi3), or Groq when deployed (see LLM_BACKEND below)
   - Framework  : LangChain (glues everything together)
 
 Run this AFTER completing the local setup in README.md (Ollama installed,
@@ -25,7 +28,7 @@ load_dotenv()  # reads .env locally if present; harmless no-op when deployed (re
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.chains import RetrievalQA
@@ -33,7 +36,7 @@ from langchain_classic.chains import RetrievalQA
 DOCS_DIR = Path(__file__).parent / "sample_docs"
 DB_DIR = Path(__file__).parent / "chroma_db"
 
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"   # small, fast, runs on CPU
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"   # same ~384-dim size class as MiniLM, runs via lightweight ONNX (fastembed), not torch
 LLM_MODEL = "llama3"                    # used only for local Ollama — change to "phi3" if llama3 is too heavy for your machine
 
 # Which LLM backend to use. Controlled by an environment variable so the SAME
@@ -122,7 +125,7 @@ def build_index():
     docs = load_documents()
     chunks = chunk_documents(docs)
 
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    embeddings = FastEmbedEmbeddings(model_name=EMBEDDING_MODEL)
 
     Chroma.from_documents(
         documents=chunks,
@@ -154,7 +157,7 @@ def ask_question_api(question: str) -> dict:
     if not DB_DIR.exists():
         raise RuntimeError("No index found. Run `python rag_assistant.py ingest` first.")
 
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    embeddings = FastEmbedEmbeddings(model_name=EMBEDDING_MODEL)
     vectordb = Chroma(persist_directory=str(DB_DIR), embedding_function=embeddings)
     retriever = vectordb.as_retriever(search_kwargs={"k": 4})  # top 4 relevant chunks — safe since reference-list noise is filtered out before indexing
 
