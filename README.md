@@ -24,6 +24,11 @@ Can run two ways:
   specifically for its small memory footprint, which matters on free-tier
   hosting (no PyTorch/CUDA dependency)
 - **Vector store**: Chroma (local, persisted to disk)
+- **Keyword search**: `rank_bm25`, fused with vector search results via
+  Reciprocal Rank Fusion (hybrid retrieval)
+- **Re-ranking**: `flashrank` (ONNX cross-encoder) scores the fused
+  candidates before the top few go to the LLM — same reasoning as the
+  embeddings choice: no torch/CUDA dependency, safe for free-tier memory
 - **LLM**: Ollama locally (`llama3`/`phi3`), or Groq (`openai/gpt-oss-20b`) when deployed
 - **Orchestration**: LangChain
 - **API**: FastAPI
@@ -109,17 +114,21 @@ terminal.
 
 ## How it works
 
-1. Documents in `sample_docs/` are loaded and split into ~500-character
-   overlapping chunks (so a fact isn't lost if it falls across a chunk
-   boundary).
-2. Each chunk is embedded with `all-MiniLM-L6-v2` and stored in a local
-   Chroma vector database.
-3. A question is embedded the same way, and the most similar chunks are
-   retrieved via cosine similarity search.
-4. The retrieved chunks are inserted into a prompt and sent to a local LLM
-   (via Ollama) with an explicit instruction to answer only from that
-   context — reducing hallucination and keeping answers traceable to a
-   source.
+1. Documents in `sample_docs/` are loaded; reference/bibliography sections
+   are automatically stripped (citation lists are keyword-dense and would
+   otherwise pollute retrieval).
+2. The remaining text is split into ~500-character overlapping chunks (so a
+   fact isn't lost if it falls across a chunk boundary).
+3. Each chunk is embedded with `fastembed` and stored in a local Chroma
+   vector database; the raw chunks are also cached for BM25.
+4. A question triggers two independent searches — vector similarity and
+   BM25 keyword search — whose rankings are merged with Reciprocal Rank
+   Fusion, then the merged candidates are re-ranked by a cross-encoder
+   (`flashrank`) for final precision.
+5. The top chunks are inserted into a prompt and sent to the LLM (Ollama
+   locally, Groq when deployed) with an explicit instruction to answer only
+   from that context — reducing hallucination and keeping answers traceable
+   to a source.
 
 ## Known limitations
 
@@ -134,8 +143,8 @@ terminal.
 - [x] Add a Streamlit front-end for a visual demo
 - [x] Filter out reference/bibliography sections before chunking academic PDFs
 - [x] Deploy to a hosted environment (Render + Streamlit Community Cloud)
-- [ ] Add a re-ranking step after retrieval
-- [ ] Hybrid search (keyword + semantic)
+- [x] Hybrid search — BM25 keyword search + vector search, merged with Reciprocal Rank Fusion
+- [x] Re-ranking step after retrieval (cross-encoder via `flashrank`, ONNX-based to keep free-tier memory usage low)
 
 ## License
 
