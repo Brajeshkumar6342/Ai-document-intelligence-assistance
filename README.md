@@ -133,9 +133,9 @@ terminal.
 - [x] Wrap `ask_question()` in a FastAPI endpoint (`/ask`)
 - [x] Add a Streamlit front-end for a visual demo
 - [x] Filter out reference/bibliography sections before chunking academic PDFs
+- [x] Deploy to a hosted environment (Render + Streamlit Community Cloud)
 - [ ] Add a re-ranking step after retrieval
 - [ ] Hybrid search (keyword + semantic)
-- [ ] Deploy to a hosted environment
 
 ## License
 

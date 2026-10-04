@@ -5,6 +5,8 @@ langchain-ollama
 langchain-chroma
 chromadb
 fastembed
+rank_bm25
+flashrank
 pypdf
 fastapi
 uvicorn

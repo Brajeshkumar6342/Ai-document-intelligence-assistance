@@ -2,6 +2,7 @@ venv/
 __pycache__/
 *.pyc
 chroma_db/
+chunks_cache.pkl
 .env
 !.env.example
 
@@ -10,7 +11,6 @@ chroma_db/
 sample_docs/*.pdf
 sample_docs/*.txt
 !sample_docs/.gitkeep
-
-!sample_docs/about_this_project.txt
-
+# This one is original content (written for this project) — safe to commit,
+# and gives the deployed demo something to answer questions from by default.
 !sample_docs/about_this_project.txt
